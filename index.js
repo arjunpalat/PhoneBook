@@ -1,5 +1,10 @@
 const express = require("express");
 const app = express();
+const morgan = require("morgan");
+
+morgan.token("body", (request, response) => {
+  return JSON.stringify(request.body);
+});
 
 const generateId = () => {
   const limit = 100000000;
@@ -35,6 +40,10 @@ let contacts = [
 ];
 
 app.use(express.json());
+
+app.use(
+  morgan(`:method :url :status :res[content-length] - :response-time ms :body`)
+);
 
 app.get("/", (request, response) => {
   response.send("<h1>Welcome to Phonebook!</h1>");
