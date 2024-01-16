@@ -64,10 +64,6 @@ app.delete("/api/contacts/:id", (request, response, next) => {
 
 app.post("/api/contacts", (request, response, next) => {
   const body = request.body;
-  if (!body.name)
-    return response.status(400).json({ Error: "A contact must have a name" });
-  if (!body.number)
-    return response.status(400).json({ Error: "A contact must have a number" });
 
   const contact = new Contact(body);
   contact
@@ -81,7 +77,11 @@ app.post("/api/contacts", (request, response, next) => {
 app.put("/api/contacts/:id", (request, response, next) => {
   const body = request.body;
 
-  Contact.findByIdAndUpdate(request.params.id, body, { new: true })
+  Contact.findByIdAndUpdate(request.params.id, body, {
+    new: true,
+    runValidators: true,
+    context: "query",
+  })
     .then((updatedContact) => {
       response.json(updatedContact);
     })
@@ -93,6 +93,11 @@ const errorHandler = (error, request, response, next) => {
     return response
       .status(400)
       .send({ Error: "The requested ID is not a valid format" });
+  } else if (error.name === "ValidationError") {
+    return response.status(400).json({
+      Error:
+        "Please ensure the contact has a name as well as a valid phone number",
+    });
   }
   next(error);
 };

@@ -17,8 +17,15 @@ mongoose
   });
 
 const contactSchema = new mongoose.Schema({
-  name: String,
-  number: String,
+  name: {
+    type: String,
+    required: true,
+  },
+  number: {
+    type: String,
+    minLength: 10,
+    required: true,
+  },
 });
 
 contactSchema.set("toJSON", {
