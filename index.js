@@ -21,9 +21,13 @@ app.get("/", (request, response) => {
   response.send("<h1>Welcome to Phonebook!</h1>");
 });
 
-app.get("/info", (request, response) => {
-  response.send(`<p>Phonebook has ${contacts.length} contacts</p>
+app.get("/info", (request, response, next) => {
+  Contact.find({})
+    .then((contacts) => {
+      response.send(`<p>Phonebook has ${contacts.length} contacts</p>
   <p>${Date()}</p>`);
+    })
+    .catch((error) => next(error));
 });
 
 app.get("/api/contacts", (request, response) => {
@@ -32,36 +36,67 @@ app.get("/api/contacts", (request, response) => {
   });
 });
 
-app.get("/api/contacts/:id", (request, response) => {
+app.get("/api/contacts/:id", (request, response, next) => {
   const id = request.params.id;
 
-  Contact.findById(id).then((note) => response.json(note));
+  Contact.findById(id)
+    .then((contact) => {
+      if (contact) {
+        response.json(contact);
+      } else {
+        response
+          .status(404)
+          .send({ Error: "The requested contact is not found" });
+      }
+    })
+    .catch((error) => next(error));
 });
 
-/* app.delete("/api/contacts/:id", (request, response) => {
-  const id = Number(request.params.id);
-  contacts = contacts.filter((person) => person.id !== id);
+app.delete("/api/contacts/:id", (request, response, next) => {
+  const id = request.params.id;
 
-  response.status(204).end();
-}); */
+  Contact.findByIdAndDelete(id)
+    .then((result) => {
+      response.status(204).end();
+    })
+    .catch((error) => next(error));
+});
 
-app.post("/api/contacts", (request, response) => {
+app.post("/api/contacts", (request, response, next) => {
   const body = request.body;
   if (!body.name)
     return response.status(400).json({ Error: "A contact must have a name" });
   if (!body.number)
     return response.status(400).json({ Error: "A contact must have a number" });
 
-  /* if (contacts.find(({ name }) => name === body.name))
+  const contact = new Contact(body);
+  contact
+    .save()
+    .then((savedContact) => {
+      response.json(savedContact);
+    })
+    .catch((error) => next(error));
+});
+
+app.put("/api/contacts/:id", (request, response, next) => {
+  const body = request.body;
+
+  Contact.findByIdAndUpdate(request.params.id, body, { new: true })
+    .then((updatedContact) => {
+      response.json(updatedContact);
+    })
+    .catch((error) => next(error));
+});
+
+const errorHandler = (error, request, response, next) => {
+  if (error.name === "CastError") {
     return response
       .status(400)
-      .json({ Error: "A contact already exists with that name" }); */
-
-  const contact = new Contact({ ...body });
-  contact.save().then((savedContact) => {
-    response.json(savedContact);
-  });
-});
+      .send({ Error: "The requested ID is not a valid format" });
+  }
+  next(error);
+};
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
